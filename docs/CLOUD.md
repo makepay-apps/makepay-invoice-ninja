@@ -1,89 +1,116 @@
 # Invoice Ninja Cloud
 
-Hosted Invoice Ninja Pro and Enterprise can connect to MakePay through the Invoice
-Ninja API. No server access or PHP installation is needed. The connector is managed
-in MakeCrypto's existing **Bookkeeping → Integrations** page.
+## Overview
 
-Full walkthrough: [Invoice Ninja (cloud)](https://www.makecrypto.io/documentation/makepay/apps/invoice-ninja-cloud).
+Connect your **hosted Invoice Ninja Pro or Enterprise company** from **MakeCrypto → Bookkeeping → Integrations**. MakePay adds a payment URL to each invoice, opens crypto checkout in that invoice's currency, and records confirmed payments back in Invoice Ninja.
 
-## Connect
+You can keep using Invoice Ninja's hosted service. This connection uses its API and custom PDF/email templates. MakePay does not appear in the hosted service's built-in payment gateway selector.
 
-1. Configure settlement for your merchant in MakeCrypto.
-2. In the correct Invoice Ninja company, open **Settings → Account Management →
-   Integrations → API Tokens**, create an administrator token and copy it securely.
-3. Open your MakeCrypto merchant's **Bookkeeping → Integrations → Invoice Ninja Cloud**.
-4. Paste the token and select an unused invoice custom field (1–4).
-5. Click **Connect Invoice Ninja**, verify the company name, then **Sync invoices**.
+For a self-hosted installation with a native client-portal gateway, use the separate [Invoice Ninja gateway guide](https://www.makecrypto.io/documentation/makepay/apps/invoice-ninja).
 
-The token is encrypted on MakeCrypto's server. It allows invoice reads, payment-URL
-updates and payment recording in the selected company. Setup labels the selected
-field and creates invoice-change webhook subscriptions. It preserves unrelated
-fields and your existing MakePay callback configuration.
+Repository and examples: [makepay-apps/makepay-invoice-ninja](https://github.com/makepay-apps/makepay-invoice-ninja). Start with the [Cloud guide](https://github.com/makepay-apps/makepay-invoice-ninja/blob/main/docs/CLOUD.md).
 
-MakePay does not appear in Invoice Ninja Cloud's built-in gateway selector. Customers
-use a MakePay link in the invoice PDF or email. The separate PHP extension in this
-repository provides a native gateway for self-hosted Invoice Ninja.
+## Before you start
 
-## Invoice currency and checkout
+You need an Invoice Ninja plan with API access, an administrator API token for the company you want to connect, and an unused invoice custom field. Configure your MakeCrypto merchant's settlement settings first. Your invoice can use **USD, EUR or another supported invoice currency**; it does not need to match the settlement asset.
 
-Create and issue a test invoice. Its client currency overrides the group and company
-defaults, as in Invoice Ninja. USD and EUR are supported; the invoice currency is
-independent of the merchant's crypto settlement asset.
+Complete any phone or sender verification Invoice Ninja requests before testing email delivery. Its [email customization guide](https://invoiceninja.github.io/docs/advanced-topics/email-customization) explains invoice, payment and reminder templates.
 
-Bookkeeping shows Invoice Ninja invoices alongside native invoices. Open the payment
-link to verify its invoice number, currency and outstanding balance. Drafts have a
-stable URL for template preparation but cannot collect payment. Checkout fetches the
-current invoice balance before creating a payment link. Paid, cancelled, archived and
-deleted invoices cannot collect another payment.
+## 1. Create an Invoice Ninja API token
 
-## PDF button and visible fallback
+Open the correct company in Invoice Ninja. Go to **Settings → Account Management → Integrations → API Tokens**, click **New Token**, name it **MakePay**, and copy it securely.
 
-In the connected MakeCrypto panel, click **Copy PDF snippet**. In Invoice Ninja,
-copy a design under **Settings → Invoice Design → Custom Designs**, enable **HTML
-Mode**, and paste the snippet in **Body** after the totals. Select that saved design
-for your invoice and regenerate the PDF after syncing it.
+![API Tokens page with the New Token button and a named MakePay QA token; the secret is not shown](cloud-screenshots/01-api-tokens.jpg)
 
-The snippet uses the selected field, such as `$invoice.custom1`. It adds a **Pay with
-MakePay** button and a visibly underlined payment URL with space below the button.
-Test the actual downloaded PDF in your viewer. Older downloads retain their old
-contents. If the URL is missing, sync and regenerate before sending it.
+Treat this token as a company credential: it allows MakePay to read invoices, add payment URLs and record payments. Do not put it in an invoice template, browser URL or screenshot.
 
-## Invoice emails and reminders
+## 2. Connect from Bookkeeping
 
-Use **Copy email snippet**, then paste its HTML into the invoice email and reminder
-templates under **Settings → Templates & Reminders**. Retain Invoice Ninja's native
-`$view_button` as a fallback. Enable PDF attachments if required.
+In MakeCrypto, select the merchant and open **Bookkeeping → Integrations → Invoice Ninja Cloud**.
 
-The email snippet uses the recipient's `$view_url` invitation. It resolves the correct
-MakePay invoice link even when the first email of a recurring invoice precedes its
-first background sync. Do not replace it with the PDF custom-field variable. Recurring
-invoices can request payment, but this connection does not automatically debit crypto.
+![Invoice Ninja Cloud connection form with an empty API token field, custom field selector, and Connect Invoice Ninja button](cloud-screenshots/02-connect-form.jpg)
 
-Complete any hosted phone/sender verification. Send an invoice and reminder to a QA
-inbox and check their received buttons and attached PDF. Invoice Ninja controls its
-email sending, reminders and payment receipts.
+Paste the token, choose an **empty invoice custom field**, and click **Connect Invoice Ninja**. MakePay verifies the token's company, stores it encrypted, labels the selected field **MakePay payment URL**, and subscribes to invoice changes. The connected company name appears when setup succeeds.
 
-## Payment recording and recovery
+Keep the selected field available for MakePay. Existing labels and invoice values in other fields are preserved. You do not need to replace your merchant's MakePay callback URL; this connector can coexist with Wix.
 
-A redirect alone does not mark the invoice paid. Background reconciliation checks an
-authoritative MakePay settlement against the merchant, checkout, amount and invoice
-currency. It then creates a Cryptocurrency payment in Invoice Ninja and allocates it
-to that invoice. Duplicate processing and retries reuse the same payment reference.
+![Connected Invoice Ninja Cloud panel in Bookkeeping with Sync invoices, Copy PDF snippet, and Copy email snippet controls](cloud-screenshots/02-connected-company.jpg)
 
-If the invoice client, currency or balance changed after checkout, review the payment
-before requesting another one. Disconnect pauses open checkouts and deactivates links;
-completed payments awaiting recording must be resolved first. Reconnecting the same
-company restores its stable links. Handle refunds separately and record them manually
-after confirming settlement.
+## 3. Sync and issue a test invoice
+
+Click **Sync invoices**. Larger accounts import in pages; continue syncing while the page says an import is in progress. Background sync also picks up changes.
+
+Create a clearly labelled test invoice in Invoice Ninja. Set the client's invoice currency, add an amount, and issue the invoice. Drafts receive a stable URL for PDF preparation but cannot collect payment until issued.
+
+![Issued QA invoices in Invoice Ninja: invoice 0001 for USD 10 and invoice 0002 for EUR 10](cloud-screenshots/03-issued-invoices.jpg)
+
+The invoice appears in Bookkeeping with **Invoice Ninja** as its source. Open its payment link: it goes directly to the standard MakePay checkout. Check the outstanding balance and currency there. Checkout uses the current balance fetched from Invoice Ninja, including partial payments.
+
+![Bookkeeping ledger showing the synced USD and EUR QA invoices with separate currency balances](cloud-screenshots/03-synced-bookkeeping.jpg)
+
+## 4. Add the payment button to PDFs
+
+In the connected MakeCrypto panel, click **Copy PDF snippet**. It references the custom field selected for this company, such as `$invoice.custom1`.
+
+In Invoice Ninja, open **Settings → Invoice Design → Custom Designs → New Design**. Name the design **MakePay invoice**, keep **Type: Design**, choose **Clean** as the starting design, and click **Save**.
+
+![New Design form: MakePay invoice, Type Design, and Clean as the starting design](cloud-screenshots/04-create-design.jpg)
+
+Open the saved design's **Settings** tab and enable **HTML Mode**. In **Body**, paste the PDF snippet immediately after the totals element, inside the same table cell. For the Clean design, that element is `<div id="table-totals" cellspacing="0">$status_logo</div>`. Keep the existing invoice HTML around it, then click **Save**.
+
+Select your saved design in **Settings → Invoice Design → General Settings → Invoice Design**, or select it for an individual test invoice first.
+
+Sync the invoice before downloading its PDF. Open the actual downloaded file and click **Pay with MakePay**. The snippet also prints a visible **Payment link** below the button, with space between them. Use that URL if the PDF viewer does not follow the button link. If the URL is absent, sync first and regenerate the PDF.
+
+Changing a design affects newly generated PDFs. An older PDF will retain its earlier contents.
+
+![Downloaded EUR QA invoice PDF with a MakePay button and a visible underlined payment link below it](cloud-screenshots/04-downloaded-pdf.jpg)
+
+## 5. Add the button to invoice emails and reminders
+
+Click **Copy email snippet** in MakeCrypto. Open **Invoice Ninja → Settings → Templates & Reminders → Invoice**. In the Body toolbar, click the document/code icon to open **Source Code**, append the snippet to your existing message, then click **Apply** and **Save**. Keep your existing subject and invoice variables.
+
+![Invoice email template with the MakePay button, underlined fallback link, and native invoice-view variable](cloud-screenshots/05-email-template.jpg)
+
+Open **Reminders → First Reminder** and repeat for each reminder template you use. Choose a reminder schedule and enable **Send Email** if you want it to run automatically. Adding a button to a template does not enable its schedule.
+
+![First Reminder template containing the MakePay button and fallback link](cloud-screenshots/06-reminder-template.jpg)
+
+Use the **email snippet**, which includes Invoice Ninja's `$view_url` invitation variable. It resolves the recipient's invoice even when a new or recurring invoice email arrives before its first background sync. Keep Invoice Ninja's normal invoice-view link as a fallback.
+
+Open **Settings → Email Settings**, enable **Attach PDF** if you want the custom invoice PDF included, and save.
+
+![Email Settings with Attach PDF enabled](cloud-screenshots/07-attach-pdf.jpg)
+
+Open a test invoice's action menu and choose **Email Invoice**. Confirm its recipient, select **Initial Email** or **First Reminder**, review the preview, then click **Send Email**. Send to an inbox you control and check both received buttons and the attached PDF. Recurring invoices can use these links, but automatic crypto charging is unavailable.
+
+## 6. Check payment confirmation
+
+The email or PDF **Pay with MakePay** button opens the standard MakePay checkout directly. The customer chooses a payment asset and completes checkout. A browser redirect alone does not mark the invoice paid.
+
+![MakePay checkout for a USD QA invoice showing 10 USD and available payment assets](cloud-screenshots/08-usd-checkout.jpg)
+
+![MakePay checkout for a EUR QA invoice showing 10 EUR and available payment assets](cloud-screenshots/08-eur-checkout.jpg)
+
+MakePay verifies its recorded settlement against the merchant, checkout, invoice currency and amount, then creates a Cryptocurrency payment in Invoice Ninja and allocates it to the invoice. Retry deliveries reuse the same payment reference. Allow a few minutes for background reconciliation; Bookkeeping displays **Recorded in Invoice Ninja** when it completes.
+
+Invoice Ninja's normal payment notification settings control its receipt emails. Configure and test those settings separately from invoice and reminder templates.
+
+## Troubleshooting
+
+- **No Cloud gateway in Invoice Ninja:** connect through MakeCrypto Bookkeeping and use its PDF/email snippets. The self-hosted PHP installer cannot be uploaded to the hosted service.
+- **Token rejected:** confirm the selected Invoice Ninja company, administrator permissions, API access and token status. Update the token through the connection form if it needs attention.
+- **Custom field needs attention:** the selected field contains another value. Preserve it and reconnect with an unused field instead of overwriting business data.
+- **Draft or closed invoice:** only issued invoices with an outstanding balance can create checkout. Deleted, archived, cancelled and paid invoices cannot collect payment.
+- **Review required:** the client, currency or balance changed after checkout, or settlement could not be allocated safely. Review the payment before requesting another one.
+- **Email blocked:** complete Invoice Ninja's phone/sender verification and check its delivery status. MakePay cannot bypass those requirements.
+- **Disconnect:** open checkouts pause and payment URLs stop working. Reconnect the same company to restore its stable links and reconcile payments arriving later. Completed payments awaiting reconciliation must be resolved first.
+- **Refunds:** handle the refund and record it manually in Invoice Ninja after checking settlement.
 
 ## Validation scope
 
-The Cloud implementation has 18 focused connector tests, including USD/EUR currency
-resolution, exact amounts, duplicate prevention, lost-response recovery, webhook
-authentication, disconnect protection and closed-invoice guards. Migration checks
-cover row-level security, rate limits and concurrency leases. Real hosted QA invoices
-and downloaded PDFs verify the vendor API and PDF link annotations.
+The Cloud implementation has 22 focused connector and HTTP regression tests, including USD/EUR currency resolution, exact amounts, duplicate prevention, lost-response recovery, authenticated webhooks, disconnect protection, closed-invoice guards, direct checkout redirects, and recovery from the old form's `Origin: null` request. Migration checks cover row-level security, rate limits and concurrency leases.
 
-These checks include unfunded test checkouts and simulated settlement workflows.
-They do not constitute a completed funded crypto transaction. Perform a controlled
-funded payment and verify Invoice Ninja's recorded balance before merchant rollout.
+Hosted QA verified real USD and EUR invoices, downloaded PDF link annotations, received invoice email links, and standard MakePay checkout amounts. Explicitly labelled, unfunded native API payment allocations verified both currencies and invoice-change webhook updates. These simulation records remain in the QA company audit history; the two checkout test invoices remain unpaid.
+
+No crypto funds were transferred. These checks do not constitute a funded settlement test. Verify a controlled funded payment and its recorded Invoice Ninja balance before merchant rollout.
