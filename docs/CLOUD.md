@@ -1,5 +1,7 @@
 # Invoice Ninja Cloud
 
+[Watch the 2-minute captioned Cloud setup walkthrough](https://github.com/makepay-apps/makepay-invoice-ninja/releases/download/cloud-guide-2026-10-11/makepay-invoice-ninja-cloud-tutorial.mp4). It uses real setup screenshots and unfunded QA checkouts.
+
 ## Overview
 
 Connect your **hosted Invoice Ninja Pro or Enterprise company** from **MakeCrypto → Bookkeeping → Integrations**. MakePay adds a payment URL to each invoice, opens crypto checkout in that invoice's currency, and records confirmed payments back in Invoice Ninja.
