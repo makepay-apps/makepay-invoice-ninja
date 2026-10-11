@@ -31,3 +31,15 @@ A complete callback must match the saved UID, payment hash, fiat amount/currency
 For localhost, simulate signed callbacks against a disposable installation. A public HTTPS endpoint is needed for real provider delivery; `127.0.0.1` cannot receive Internet callbacks. Use separate merchant companies for Wix and Invoice Ninja when they need different default callbacks.
 
 See [testing evidence](TESTING.md) for the exact upstream version, test commands and limits.
+
+## Preserve the invoice currency
+
+An EUR invoice also redirects from the native portal to a checkout displaying **10 EUR**. The price currency stays separate from the customer's chosen crypto asset.
+
+![Native EUR invoice redirected to MakePay](screenshots/05-eur-hosted-checkout.png)
+
+## Add PDF and email buttons
+
+Follow the [PDF and email setup guide](PDF-AND-EMAIL.md) to customize the invoice design and Invoice/Reminder templates. The button opens the invoice portal; customers select Crypto / MakePay there.
+
+![Native invoice PDF with MakePay button](screenshots/06-pdf-payment-button.png)

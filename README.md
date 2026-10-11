@@ -17,6 +17,7 @@ Ninja's hosted SaaS without their cooperation.
 - Signed asynchronous payment confirmation, native payment records, invoice
   balance updates and receipts.
 - Persistent link reuse, duplicate webhook protection and company/gateway binding.
+- Optional MakePay buttons in invoice PDFs, invoice emails and reminder emails.
 
 The invoice currency is sent as `fiatCurrency`; the company's configured crypto
 settlement asset is separate. Currency precision comes from Invoice Ninja.
@@ -75,6 +76,14 @@ If checkout creation has an ambiguous timeout, the saved `makepay.state` remains
 `creating` to prevent a duplicate charge. Inspect MakeCrypto payment links for
 `orderId = ninja_PAYMENT_HASH` and reconcile the saved UID/URL before allowing
 another attempt. Never delete a reservation without checking provider history.
+
+## PDF and email buttons
+
+Use the included [PDF and email templates](docs/PDF-AND-EMAIL.md) to add **Pay with
+MakePay** buttons. They open the invoice portal, where the customer selects
+Crypto / MakePay. Invoice Ninja supports reminders, PDF email attachments and
+native payment receipts. The guide explains setup and direct-link behavior when
+multiple gateways are configured.
 
 ## Tests
 

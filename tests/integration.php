@@ -21,11 +21,11 @@ Queue::fake(); Mail::fake(); Event::fake(); Http::preventStrayRequests();
 $fixture = new class { use Tests\MockAccountData; };
 $fixture->makeTestData();
 $eur=App\Models\Currency::where('code','EUR')->firstOrFail();
-$clientSettings=$fixture->client->settings;$clientSettings->currency_id=$eur->id;$fixture->client->settings=$clientSettings;$fixture->client->save();
+$clientSettings=$fixture->client->settings;$clientSettings->currency_id=$eur->id;$clientSettings->client_online_payment_notification=true;$clientSettings->pdf_email_attachment=false;$clientSettings->document_email_attachment=false;$fixture->client->settings=$clientSettings;$fixture->client->save();
 $gateway = Gateway::where('provider','MakePay')->firstOrFail();
 $cg = new CompanyGateway(); $cg->company_id=$fixture->company->id; $cg->user_id=$fixture->user->id; $cg->gateway_key=$gateway->key;
 $cg->setConfig(['companyId'=>'test-company','apiKeyId'=>'test-key','apiKeySecret'=>'test-api-secret','webhookSecret'=>'test-webhook-secret']);
-$cg->fees_and_limits = (object) ['4'=>(object) ['is_enabled'=>true,'fee_amount'=>0,'fee_percent'=>0,'fee_cap'=>0,'fee_tax_rate1'=>0,'fee_tax_rate2'=>0,'fee_tax_rate3'=>0,'fee_tax_name1'=>'','fee_tax_name2'=>'','fee_tax_name3'=>'','min_limit'=>-1,'max_limit'=>-1]];
+$cg->fees_and_limits = (object) ['4'=>new App\DataMapper\FeesAndLimits()];
 $cg->save();
 $amount=number_format($fixture->invoice->balance,2,'.','');
 $hash=bin2hex(random_bytes(16));
@@ -48,6 +48,8 @@ $count=0;
 function verify($bool,$message){global$count;if(!$bool)throw new RuntimeException($message);$count++;echo "PASS $message\n";}
 verify($cg->driver() instanceof MakePayPaymentDriver,'Native driver discovery');
 verify(isset($gateway->getMethods()[GatewayType::CRYPTO]),'Native gateway settings metadata');
+$gatewayApi=(new App\Transformers\GatewayTransformer())->transform($gateway);
+verify(array_keys(json_decode($gatewayApi['fields'],true,512,JSON_THROW_ON_ERROR))===['companyId','apiKeyId','apiKeySecret','webhookSecret'],'Merchant gateway API renders all four connection fields');
 verify(in_array(GatewayType::CRYPTO, array_column($fixture->client->service()->getPaymentMethods((float)$amount), 'gateway_type_id')), 'Native client portal offers crypto payment');
 Http::fake(['www.makecrypto.io/*'=>Http::response(['paymentLink'=>['uid'=>'mp_'.$hash,'publicUrl'=>'https://www.makepay.io/pay/demo']],201)]);
 verify($driver->auth()==='ok','Credential validation');
@@ -56,6 +58,26 @@ verify($r->getTargetUrl()==='https://www.makepay.io/pay/demo','Hosted checkout r
 Http::assertSent(fn($r)=>$r->method()==='POST' && $r['payload']['amount']===$amount && $r['payload']['fiatCurrency']==='EUR' && !isset($r['payload']['currency']) && $r['source']==='invoice-ninja');
 verify(true,'EUR server price ignores tampered browser fields and preserves fiat currency');
 $driver->payment_hash=$ph->fresh();$driver->processPaymentResponse(Illuminate\Http\Request::create('/','POST'));Http::assertSentCount(2);verify(true,'Repeated checkout reuses the same payment link');
+$invitation=$fixture->invoice->invitations->first();
+$variables=(new App\Utils\HtmlEngine($invitation))->makeValues();
+verify(($variables['$view_url']??'')===$invitation->getLink(),'PDF and email use native invitation URL');
+foreach (['email-invoice'=>'invoice','email-reminder'=>'reminder1'] as $example=>$template) {
+    $engine=(new App\Mail\Engine\InvoiceEmailEngine($invitation,$template,['subject'=>'Invoice $number','body'=>file_get_contents(__DIR__.'/../examples/'.$example.'.html')]))->build();
+    verify(str_contains($engine->getBody(),'Pay with MakePay') && str_contains($engine->getBody(),'href="'.$invitation->getLink().'"') && !str_contains($engine->getBody(),'$view_url'),'Native '.$template.' email renders the MakePay button');
+}
+$oldAppUrl=config('ninja.app_url');
+config(['ninja.app_url'=>'https://billing.example.com']);
+$baseDesign=App\Models\Design::findOrFail(2);
+$designBody=file_get_contents(config('ninja.designs.base_path').strtolower($baseDesign->name).'.html');
+$pdfButton=file_get_contents(__DIR__.'/../examples/pdf-payment-button.html');
+$designBody=str_contains($designBody,'</body>')?str_replace('</body>',$pdfButton.'</body>',$designBody):$designBody.$pdfButton;
+$design=$baseDesign->replicate();$design->name='MakePay test PDF';$design->is_custom=true;$design->company_id=$fixture->company->id;$design->user_id=$fixture->user->id;
+$design->design=(object)['includes'=>'','header'=>'','body'=>$designBody,'footer'=>''];$design->save();
+$fixture->invoice->design_id=$design->id;$fixture->invoice->save();
+$invitation->unsetRelation('invoice');
+$pdfHtml=(new App\Services\Pdf\PdfService($invitation))->boot()->getHtml();
+verify(str_contains($pdfHtml,'href="'.$invitation->getLink().'"') && str_contains($pdfHtml,'Pay with MakePay'),'Native PDF design and sanitizer retain the clickable MakePay button');
+config(['ninja.app_url'=>$oldAppUrl]);
 $e=['type'=>'makepay.payment.status_changed','paymentLink'=>['uid'=>'mp_'.$hash,'merchantOrderId'=>'ninja_'.$hash,'amount'=>$amount,'currency'=>'USDC','fiatAmount'=>$amount,'fiatCurrency'=>'EUR'],'session'=>['id'=>'session_'.$hash,'status'=>'complete']];
 function signedRequest(array $e,int $offset=0){$raw=json_encode($e);$t=time()+$offset;$sig=hash_hmac('sha256',$t.'.'.$raw,'test-webhook-secret');return Illuminate\Http\Request::create('/','POST',[],[],[],['HTTP_X_MAKEPAY_SIGNATURE'=>'t='.$t.',v1='.$sig],$raw);}
 $before=Payment::where('company_gateway_id',$cg->id)->count();
@@ -65,8 +87,10 @@ verify($driver->processWebhookRequest(signedRequest($e,-301))->getStatusCode()==
 foreach(['uid'=>'wrong','fiatAmount'=>'0.01','fiatCurrency'=>'USD']as$key=>$value){$v=$e;$v['paymentLink'][$key]=$value;verify($driver->processWebhookRequest(signedRequest($v))->getStatusCode()===400,'Reject wrong '.$key);}
 $r=$driver->processWebhookRequest(signedRequest($e));verify($r->getStatusCode()===200,'Completed webhook accepted: '.$r->getContent());
 verify($ph->fresh()->payment_id!==null,'Native payment record attached');
+Queue::assertPushed(App\Jobs\Payment\EmailPayment::class,1);verify(true,'Native online payment receipt queued');
 verify((float)$fixture->invoice->fresh()->balance===0.0,'Invoice balance cleared by native payment service');
 $driver->processWebhookRequest(signedRequest($e));verify(Payment::where('company_gateway_id',$cg->id)->count()===$before+1,'Duplicate webhook creates exactly one payment');
+Queue::assertPushed(App\Jobs\Payment\EmailPayment::class,1);verify(true,'Duplicate callback sends no second receipt');
 $wrong=new CompanyGateway();$wrong->company_id=$fixture->company->id;$wrong->user_id=$fixture->user->id;$wrong->gateway_key=$gateway->key;$wrong->setConfig(['webhookSecret'=>'test-webhook-secret']);$wrong->save();
 verify((new MakePayPaymentDriver($wrong))->processWebhookRequest(signedRequest($e))->getStatusCode()===400,'Reject cross-gateway callback');
 $callbackUrl=route('payment_webhook',['company_key'=>$fixture->company->company_key,'company_gateway_id'=>$cg->hashed_id]);

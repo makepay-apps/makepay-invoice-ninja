@@ -35,7 +35,9 @@ $gateway->name = 'MakePay';
 $gateway->key = $gateway->key ?: substr(hash('sha256', 'makepay-invoice-ninja-v1'), 0, 32);
 $gateway->is_offsite = true; $gateway->visible = true;
 $gateway->site_url = 'https://www.makepay.io'; $gateway->default_gateway_type_id = App\Models\GatewayType::CRYPTO;
-$gateway->fields = (object) ['companyId' => '', 'apiKeyId' => '', 'apiKeySecret' => '', 'webhookSecret' => ''];
+// Upstream gateways store a JSON string through the model's object cast.
+// The merchant API transformer expects that string and the UI decodes it.
+$gateway->fields = json_encode(['companyId' => '', 'apiKeyId' => '', 'apiKeySecret' => '', 'webhookSecret' => ''], JSON_THROW_ON_ERROR);
 $gateway->save();
 Illuminate\Support\Facades\Artisan::call('optimize:clear');
 echo "Installed MakePay. Open Settings > Payment Settings > New Gateway > MakePay.\n";
