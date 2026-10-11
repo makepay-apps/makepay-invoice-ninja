@@ -12,7 +12,7 @@ Ninja's hosted SaaS without their cooperation.
 
 - Invoice currencies such as EUR and USD, including Invoice Ninja's calculated gateway fees and partial
   payment amounts. Customers choose supported crypto assets on MakePay checkout.
-- MakePay company/API key connection fields in **Settings → Payment Settings**.
+- MakePay company/API key connection fields in **Settings → Payment Settings → Configure Gateways**.
 - Regular and Livewire client checkout pages.
 - Signed asynchronous payment confirmation, native payment records, invoice
   balance updates and receipts.
@@ -48,7 +48,7 @@ checks against that version. Review the small model patch before a major upgrade
    `makepay:payment-links:read` and `makepay:payment-links:write`.
 2. Configure a supported stablecoin settlement route for that company.
 3. Copy the company ID, API key ID/secret and company webhook secret.
-4. In Invoice Ninja open **Settings → Payment Settings → New Gateway** and
+4. In Invoice Ninja open **Settings → Payment Settings → Configure Gateways → Create** and
    choose **MakePay**.
 5. Enter `companyId`, `apiKeyId`, `apiKeySecret`, and `webhookSecret`. Invoice
    Ninja encrypts gateway configuration. Enable the Crypto payment method.
@@ -58,7 +58,7 @@ checks against that version. Review the small model patch before a major upgrade
 https://your-ninja-domain/payment_webhook/COMPANY_KEY/HASHED_COMPANY_GATEWAY_ID
 ```
 
-Set that HTTPS URL under **Integrations → API Integrations → Callback URL configuration** in MakeCrypto. The ID
+Copy the saved gateway's **Webhook URL** from its Overview screen and set that HTTPS URL under **Integrations → API Integrations → Callback URL configuration** in MakeCrypto. The ID
 is the hashed **company gateway** ID, not the global gateway ID. Invoice Ninja
 exposes the company key and hashed company gateway ID in its API responses.
 A MakeCrypto company has one default callback destination: use separate company

@@ -77,7 +77,10 @@ $fixture->invoice->design_id=$design->id;$fixture->invoice->save();
 $invitation->unsetRelation('invoice');
 $pdfHtml=(new App\Services\Pdf\PdfService($invitation))->boot()->getHtml();
 verify(str_contains($pdfHtml,'href="'.$invitation->getLink().'"') && str_contains($pdfHtml,'Pay with MakePay'),'Native PDF design and sanitizer retain the clickable MakePay button');
+verify(str_contains($pdfHtml,'Payment link:') && str_contains(strip_tags($pdfHtml),$invitation->getLink()),'PDF includes a visible payment URL fallback');
 config(['ninja.app_url'=>$oldAppUrl]);
+$localPdfHtml=(new App\Services\Pdf\PdfService($invitation))->boot()->getHtml();
+verify(str_contains(strip_tags($localPdfHtml),$invitation->getLink()) && str_contains($localPdfHtml,'a.makepay-payment-button:not([href])'),'Local PDF retains the copyable URL and hides a button if its href is removed');
 $e=['type'=>'makepay.payment.status_changed','paymentLink'=>['uid'=>'mp_'.$hash,'merchantOrderId'=>'ninja_'.$hash,'amount'=>$amount,'currency'=>'USDC','fiatAmount'=>$amount,'fiatCurrency'=>'EUR'],'session'=>['id'=>'session_'.$hash,'status'=>'complete']];
 function signedRequest(array $e,int $offset=0){$raw=json_encode($e);$t=time()+$offset;$sig=hash_hmac('sha256',$t.'.'.$raw,'test-webhook-secret');return Illuminate\Http\Request::create('/','POST',[],[],[],['HTTP_X_MAKEPAY_SIGNATURE'=>'t='.$t.',v1='.$sig],$raw);}
 $before=Payment::where('company_gateway_id',$cg->id)->count();

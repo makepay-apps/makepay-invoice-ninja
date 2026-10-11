@@ -4,6 +4,12 @@ Use self-hosted Invoice Ninja v5. The invoice currency is preserved in MakePay c
 
 [Watch the captioned walkthrough](makepay-invoice-ninja-tutorial.mp4).
 
+## Connect in native merchant settings
+
+Open **Settings → Payment Settings → Configure Gateways → Create**, search for MakePay and select it. Enter the four approved company credentials, save the gateway and enable Crypto. Invoice Ninja encrypts the saved configuration.
+
+![MakePay connection fields in Invoice Ninja's native gateway form](screenshots/00-native-gateway-settings.png)
+
 ## Choose the native payment option
 
 Open an unpaid invoice and choose Crypto. Invoice Ninja performs its normal contact/address checks before displaying the gateway.

@@ -9,7 +9,9 @@ Invoice Ninja supports a clickable **Pay with MakePay** button in an invoice PDF
 3. Preview the design, save it and select it as your invoice design.
 4. Download an unpaid invoice PDF. Click its button and verify that it opens that invoice in your public client portal. Choose Crypto / MakePay to continue.
 
-Use a public HTTPS domain for Invoice Ninja's application URL. The native PDF sanitizer can remove links containing localhost/IP addresses or ports; our localhost preview used `https://billing.example.com` to verify the PDF link annotation. The sample domain is illustrative.
+The template also prints the complete payment URL below the button. If Invoice Ninja's PDF sanitizer removes the button's link, the template hides that button and leaves the URL available to copy. Use a public HTTPS domain for Invoice Ninja's application URL: the native sanitizer removes links containing localhost/IP addresses or ports. Our public-domain rendering used `https://billing.example.com` to verify clickable PDF annotations; the sample domain is illustrative.
+
+For fully local PDF testing, we used Invoice Ninja's supported Gotenberg renderer with `PDF_GENERATOR=gotenberg` and a loopback-only `GOTENBERG_API_URL`. The hosted renderer used earlier removed the localhost IP even from the visible URL. See [Gotenberg installation](https://gotenberg.dev/docs/getting-started/installation); keep its API private.
 
 ![Native invoice PDF with a clickable MakePay button](screenshots/06-pdf-payment-button.png)
 
