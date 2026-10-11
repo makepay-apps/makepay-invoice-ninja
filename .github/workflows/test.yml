@@ -1,0 +1,42 @@
+name: Test MakePay Invoice Ninja
+on: [push, pull_request]
+jobs:
+  native-integration:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: makepay-local-only
+          MYSQL_DATABASE: ninja
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -pmakepay-local-only"
+          --health-interval=10s --health-timeout=5s --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: bcmath, curl, gd, intl, mbstring, pdo_mysql, zip
+          coverage: none
+      - run: php tests/protocol.php
+      - name: Fetch pinned upstream application
+        run: |
+          git init /tmp/invoiceninja
+          git -C /tmp/invoiceninja remote add origin https://github.com/invoiceninja/invoiceninja.git
+          git -C /tmp/invoiceninja fetch --depth=1 origin f1ffa5f9989afbed4e7dc80b5c0cc18944335ffc
+          git -C /tmp/invoiceninja checkout FETCH_HEAD
+          composer install --working-dir=/tmp/invoiceninja --no-interaction --prefer-dist --no-progress
+      - name: Prepare isolated local application
+        run: |
+          cp tests/ci.env /tmp/invoiceninja/.env
+          cd /tmp/invoiceninja
+          php artisan key:generate
+          php artisan migrate --force
+          php artisan db:seed --force
+      - name: Install twice and exercise native payment allocation
+        run: |
+          php scripts/install.php /tmp/invoiceninja
+          php scripts/install.php /tmp/invoiceninja
+          php -d memory_limit=512M tests/integration.php /tmp/invoiceninja

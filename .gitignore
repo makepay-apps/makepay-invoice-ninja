@@ -1,0 +1,7 @@
+.env
+vendor/
+output/
+dist/
+*.log
+
+output-fixture.json
