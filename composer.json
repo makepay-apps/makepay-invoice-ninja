@@ -1,0 +1,1 @@
+{"name":"makepay/invoice-ninja","description":"MakePay hosted crypto gateway for self-hosted Invoice Ninja v5","type":"library","license":"MIT","require":{"php":"^8.2"},"scripts":{"test":"php tests/protocol.php"}}

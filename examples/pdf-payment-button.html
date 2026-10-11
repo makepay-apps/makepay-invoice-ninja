@@ -1,0 +1,9 @@
+<!-- Insert into the body of your custom invoice PDF design. -->
+<style>
+  a.makepay-payment-button:not([href]) { display: none !important; }
+</style>
+<div style="margin-top:24px;text-align:center;page-break-inside:avoid">
+  <a class="makepay-payment-button" href="$view_url" style="display:inline-block;background:#7758d6;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:6px;font-weight:bold">Pay with MakePay</a>
+  <p style="margin:14px 0 0;font-size:10px;line-height:1.4;color:#64748b">Open secure invoice checkout and select Crypto / MakePay.</p>
+  <p style="margin:10px 0 0;font-size:10px;line-height:1.4;word-break:break-all">Payment link: <a href="$view_url" style="color:#7758d6;text-decoration:underline">$view_url</a></p>
+</div>
