@@ -1,5 +1,9 @@
 # MakePay for Invoice Ninja
 
+**Using hosted Invoice Ninja Pro or Enterprise?** Connect through **MakeCrypto →
+Bookkeeping → Integrations → Invoice Ninja Cloud**. Follow the [Cloud connection
+guide](docs/CLOUD.md); the PHP installer below is for self-hosted installations.
+
 **1.0.0-rc.1:** connection and local integration checks passed; funded settlement remains a rollout prerequisite. See [validation evidence](docs/TESTING.md).
 
 A hosted crypto payment gateway for **self-hosted Invoice Ninja v5**, with native
