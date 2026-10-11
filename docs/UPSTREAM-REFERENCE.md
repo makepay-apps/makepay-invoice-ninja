@@ -22,7 +22,7 @@ Reviewed upstream: `invoiceninja/invoiceninja`, `v5-stable`, commit
 
 Differences necessary for MakePay: do not trust browser amount/currency; reserve
 creation in the database; verify timestamped raw-body HMAC before accessing a
-payment hash; match UID, USD amount and merchant order reference; only a session
+payment hash; match UID, fiat amount/currency and merchant order reference; only a session
 whose status is exactly `complete` can complete payment; serialize callbacks
 with a row lock; prohibit cross-gateway/company callbacks. A redirect never
 creates a payment. Refunds and automatic recurring debits are unsupported.

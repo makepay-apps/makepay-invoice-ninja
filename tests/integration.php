@@ -20,6 +20,8 @@ use App\PaymentDrivers\MakePayPaymentDriver;
 Queue::fake(); Mail::fake(); Event::fake(); Http::preventStrayRequests();
 $fixture = new class { use Tests\MockAccountData; };
 $fixture->makeTestData();
+$eur=App\Models\Currency::where('code','EUR')->firstOrFail();
+$clientSettings=$fixture->client->settings;$clientSettings->currency_id=$eur->id;$fixture->client->settings=$clientSettings;$fixture->client->save();
 $gateway = Gateway::where('provider','MakePay')->firstOrFail();
 $cg = new CompanyGateway(); $cg->company_id=$fixture->company->id; $cg->user_id=$fixture->user->id; $cg->gateway_key=$gateway->key;
 $cg->setConfig(['companyId'=>'test-company','apiKeyId'=>'test-key','apiKeySecret'=>'test-api-secret','webhookSecret'=>'test-webhook-secret']);
@@ -51,16 +53,16 @@ Http::fake(['www.makecrypto.io/*'=>Http::response(['paymentLink'=>['uid'=>'mp_'.
 verify($driver->auth()==='ok','Credential validation');
 $r=$driver->processPaymentResponse(Illuminate\Http\Request::create('/','POST',['amount'=>'0.01','currency'=>'AED']));
 verify($r->getTargetUrl()==='https://www.makepay.io/pay/demo','Hosted checkout redirect');
-Http::assertSent(fn($r)=>$r->method()==='POST' && $r['payload']['amount']===$amount && $r['payload']['currency']==='USD' && $r['source']==='invoice-ninja');
-verify(true,'Server-derived amount ignores tampered browser fields');
+Http::assertSent(fn($r)=>$r->method()==='POST' && $r['payload']['amount']===$amount && $r['payload']['fiatCurrency']==='EUR' && !isset($r['payload']['currency']) && $r['source']==='invoice-ninja');
+verify(true,'EUR server price ignores tampered browser fields and preserves fiat currency');
 $driver->payment_hash=$ph->fresh();$driver->processPaymentResponse(Illuminate\Http\Request::create('/','POST'));Http::assertSentCount(2);verify(true,'Repeated checkout reuses the same payment link');
-$e=['type'=>'makepay.payment.status_changed','paymentLink'=>['uid'=>'mp_'.$hash,'merchantOrderId'=>'ninja_'.$hash,'amount'=>$amount,'currency'=>'USD'],'session'=>['id'=>'session_'.$hash,'status'=>'complete']];
+$e=['type'=>'makepay.payment.status_changed','paymentLink'=>['uid'=>'mp_'.$hash,'merchantOrderId'=>'ninja_'.$hash,'amount'=>$amount,'currency'=>'USDC','fiatAmount'=>$amount,'fiatCurrency'=>'EUR'],'session'=>['id'=>'session_'.$hash,'status'=>'complete']];
 function signedRequest(array $e,int $offset=0){$raw=json_encode($e);$t=time()+$offset;$sig=hash_hmac('sha256',$t.'.'.$raw,'test-webhook-secret');return Illuminate\Http\Request::create('/','POST',[],[],[],['HTTP_X_MAKEPAY_SIGNATURE'=>'t='.$t.',v1='.$sig],$raw);}
 $before=Payment::where('company_gateway_id',$cg->id)->count();
 foreach(['underpaid','pending','failed','expired','unpaid','incomplete']as$status){$v=$e;$v['session']['status']=$status;verify($driver->processWebhookRequest(signedRequest($v))->getStatusCode()===200,'Ignore '.$status);}
 verify(Payment::where('company_gateway_id',$cg->id)->count()===$before,'No payment for intermediate or failed statuses');
 verify($driver->processWebhookRequest(signedRequest($e,-301))->getStatusCode()===401,'Reject expired signature');
-foreach(['uid'=>'wrong','amount'=>'0.01','currency'=>'EUR']as$key=>$value){$v=$e;$v['paymentLink'][$key]=$value;verify($driver->processWebhookRequest(signedRequest($v))->getStatusCode()===400,'Reject wrong '.$key);}
+foreach(['uid'=>'wrong','fiatAmount'=>'0.01','fiatCurrency'=>'USD']as$key=>$value){$v=$e;$v['paymentLink'][$key]=$value;verify($driver->processWebhookRequest(signedRequest($v))->getStatusCode()===400,'Reject wrong '.$key);}
 $r=$driver->processWebhookRequest(signedRequest($e));verify($r->getStatusCode()===200,'Completed webhook accepted: '.$r->getContent());
 verify($ph->fresh()->payment_id!==null,'Native payment record attached');
 verify((float)$fixture->invoice->fresh()->balance===0.0,'Invoice balance cleared by native payment service');
@@ -84,7 +86,7 @@ Http::swap(new Illuminate\Http\Client\Factory());Http::preventStrayRequests();
 Http::fake(['www.makecrypto.io/*'=>Http::response(['paymentLink'=>['uid'=>'mp_'.$partialHash,'publicUrl'=>'https://www.makepay.io/pay/partial']],201)]);
 $partialDriver->processPaymentResponse(Illuminate\Http\Request::create('/','POST'));
 Http::assertSent(fn($r)=>$r->method()==='POST'&&$r['payload']['amount']==='6.00');verify(true,'Partial checkout includes the native gateway fee');
-$partialEvent=['paymentLink'=>['uid'=>'mp_'.$partialHash,'merchantOrderId'=>'ninja_'.$partialHash,'amount'=>'6.00','currency'=>'USD'],'session'=>['id'=>'session_'.$partialHash,'status'=>'complete']];
+$partialEvent=['paymentLink'=>['uid'=>'mp_'.$partialHash,'merchantOrderId'=>'ninja_'.$partialHash,'amount'=>'6.00','currency'=>'USDC','fiatAmount'=>'6.00','fiatCurrency'=>'USD'],'session'=>['id'=>'session_'.$partialHash,'status'=>'complete']];
 $partialResponse=$partialDriver->processWebhookRequest(signedRequest($partialEvent));
 verify($partialResponse->getStatusCode()===200,'Partial payment callback accepted: '.$partialResponse->getContent());
 verify((float)$partial->invoice->fresh()->balance===5.0,'Partial payment leaves the correct invoice balance');

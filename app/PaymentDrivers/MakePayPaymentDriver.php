@@ -51,18 +51,20 @@ class MakePayPaymentDriver extends BaseDriver
     }
     public function processPaymentResponse($request)
     {
-        if ($this->client->getCurrencyCode() !== 'USD') throw new PaymentFailed('MakePay requires USD invoices. Other fiat currencies are not converted automatically.');
+        $currency = $this->client->getCurrencyCode();
+        if (!preg_match('/^[A-Z]{3}$/D', $currency)) throw new PaymentFailed('Invalid invoice currency.');
+        $precision = (int) \App\Models\Currency::where('code', $currency)->firstOrFail()->precision;
         $hash = $this->payment_hash->hash;
-        $saved = DB::transaction(function () use ($hash) {
+        $saved = DB::transaction(function () use ($hash, $currency, $precision) {
             $row = PaymentHash::where('hash', $hash)->lockForUpdate()->firstOrFail();
             $state = (array) ($row->data->makepay ?? []);
             if ($state) {
-                if (($state['client_id'] ?? null) !== $this->client->id || ($state['gateway_id'] ?? null) !== $this->company_gateway->id) throw new PaymentFailed('Checkout belongs to a different account.');
+                if (($state['client_id'] ?? null) !== $this->client->id || ($state['gateway_id'] ?? null) !== $this->company_gateway->id || ($state['currency'] ?? null) !== $currency || ($state['amount'] ?? null) !== Protocol::amount($row->amount_with_fee(), $precision)) throw new PaymentFailed('Checkout account or price changed.');
                 if (isset($state['url'])) return $state;
                 throw new PaymentFailed('Checkout creation is pending. Contact the merchant before retrying.');
             }
             $state = ['client_id' => $this->client->id, 'gateway_id' => $this->company_gateway->id,
-                'amount' => Protocol::amount($row->amount_with_fee()), 'state' => 'creating'];
+                'amount' => Protocol::amount($row->amount_with_fee(), $precision), 'currency' => $currency, 'precision' => $precision, 'state' => 'creating'];
             $row->data = array_merge((array) $row->data, ['makepay' => $state]); $row->save();
             return $state;
         });
@@ -71,7 +73,7 @@ class MakePayPaymentDriver extends BaseDriver
         if (!$invoice) throw new PaymentFailed('Invoice reference missing.');
         $return = route('client.invoice.show', ['invoice' => $invoice->invoice_id]);
         $result = $this->api('POST', ['source' => 'invoice-ninja', 'status' => 'active', 'sendPaymentRequestEmail' => false,
-            'payload' => ['title' => 'Invoice '.$invoice->invoice_number, 'amount' => $saved['amount'], 'currency' => 'USD',
+            'payload' => ['title' => 'Invoice '.$invoice->invoice_number, 'amount' => $saved['amount'], 'fiatCurrency' => $saved['currency'],
                 'orderId' => 'ninja_'.$hash, 'clientEmail' => $this->client->present()->email(),
                 'returnUrl' => $return, 'successUrl' => $return, 'failureUrl' => $return, 'expirationTime' => '12h']]);
         $link = $result['paymentLink'] ?? [];

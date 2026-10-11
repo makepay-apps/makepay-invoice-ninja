@@ -28,6 +28,7 @@ foreach (['app/PaymentDrivers', 'resources/views'] as $folder) {
 require $target.'/vendor/autoload.php';
 $app = require $target.'/bootstrap/app.php';
 $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+set_exception_handler(function (Throwable $error) { fwrite(STDERR, $error->getMessage().PHP_EOL); exit(1); });
 $gateway = App\Models\Gateway::where('provider', 'MakePay')->first() ?? new App\Models\Gateway();
 $gateway->provider = 'MakePay';
 $gateway->name = 'MakePay';

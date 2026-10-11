@@ -10,7 +10,7 @@ Ninja's hosted SaaS without their cooperation.
 
 ## Supported behavior
 
-- USD invoices, including Invoice Ninja's calculated gateway fees and partial
+- Invoice currencies such as EUR and USD, including Invoice Ninja's calculated gateway fees and partial
   payment amounts. Customers choose supported crypto assets on MakePay checkout.
 - MakePay company/API key connection fields in **Settings → Payment Settings**.
 - Regular and Livewire client checkout pages.
@@ -18,9 +18,9 @@ Ninja's hosted SaaS without their cooperation.
   balance updates and receipts.
 - Persistent link reuse, duplicate webhook protection and company/gateway binding.
 
-Other fiat currencies are rejected. MakePay's partner API does not automatically
-convert `fiatCurrency`, and this extension must not charge 100 USD for a 100 AED
-invoice. Configure the client/invoice currency as USD before using this gateway.
+The invoice currency is sent as `fiatCurrency`; the company's configured crypto
+settlement asset is separate. Currency precision comes from Invoice Ninja.
+Callbacks verify the saved fiat amount and currency, rather than the token symbol.
 Refunds are handled in MakePay and recorded manually after settlement. Saved
 payment methods and automatic recurring debits are not supported.
 
@@ -65,7 +65,7 @@ credentials for separate stores or route callbacks through a reviewed dispatcher
 
 ## Checkout and verification
 
-Open an unpaid USD invoice in the client portal, choose Crypto/MakePay, and click
+Open an unpaid invoice in the client portal, choose Crypto/MakePay, and click
 **Continue to MakePay**. The server obtains the payable amount from Invoice
 Ninja's payment hash, creates a hosted link, and redirects the customer. The
 invoice becomes paid only after a verified `session.status = complete` webhook.

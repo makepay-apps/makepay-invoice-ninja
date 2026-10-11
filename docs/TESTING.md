@@ -8,7 +8,7 @@ Invoice Ninja `v5-stable`, commit `f1ffa5f9989afbed4e7dc80b5c0cc18944335ffc`; PH
 
 ## Automated checks
 
-`php tests/protocol.php`: 18 checks for HMAC verification, timestamp window, exact amounts and payment reference matching.
+`php tests/protocol.php`: 22 checks for HMAC verification, timestamp window, exact amounts and payment reference matching.
 
 `php -d memory_limit=512M tests/integration.php /path/to/disposable/invoiceninja`: 29 native checks, including driver/settings discovery, actual client payment-method discovery, credential validation, server totals, persistent link reuse, status filtering, stale signatures, wrong UID/amount/currency, company gateway binding, native payment allocation, duplicate delivery, full HTTP routing, native fee quote, fee-inclusive partial payment and one-time fee recording. Requests to MakePay are mocked; the upstream models, MySQL transactions, fee calculations and payment service are real.
 
@@ -23,3 +23,5 @@ The Paid screenshot is from a local signed-callback simulation. The hosted-check
 ## Reproduce
 
 Use a disposable local/testing Invoice Ninja application with its dependencies installed and database migrated/seeded. See `tests/ci.env` and the GitHub Actions workflow. Run the installer, protocol and integration checks. To create an unpaid browser fixture, pass `--portal-fixture` to the integration script; it prints an invitation URL. `output-fixture.json` is ignored and contains test references only.
+
+The native automated suite now creates and completes an EUR invoice, preserving `fiatCurrency` independently of USDC settlement. It also rejects mismatched fiat amounts/currencies. Protocol checks cover zero and three decimal price precision.

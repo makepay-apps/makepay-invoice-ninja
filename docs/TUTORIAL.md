@@ -1,6 +1,6 @@
 # Invoice Ninja merchant and customer walkthrough
 
-Use self-hosted Invoice Ninja v5 and USD invoices. See the README for installation and the four encrypted gateway connection fields. Configure a stablecoin settlement route in MakeCrypto and set the company's callback to Invoice Ninja's native gateway webhook URL.
+Use self-hosted Invoice Ninja v5. The invoice currency is preserved in MakePay checkout. See the README for installation and the four encrypted gateway connection fields. Configure a stablecoin settlement route in MakeCrypto and set the company's callback to Invoice Ninja's native gateway webhook URL.
 
 [Watch the captioned walkthrough](makepay-invoice-ninja-tutorial.mp4).
 
@@ -24,7 +24,7 @@ A real Demo Shop 2 API connection created this $10 USD payment link from the loc
 
 ## Confirm through a signed callback
 
-A complete callback must match the saved UID, payment hash, USD amount and company gateway. Invoice Ninja's native payment service allocates it to the invoice. The following **Paid** view comes from a local signed-callback simulation; no real funds were transferred.
+A complete callback must match the saved UID, payment hash, fiat amount/currency and company gateway. Invoice Ninja's native payment service allocates it to the invoice. The following **Paid** view comes from a local signed-callback simulation; no real funds were transferred.
 
 ![Paid invoice after the local native callback simulation](screenshots/03-paid-invoice.jpg)
 
