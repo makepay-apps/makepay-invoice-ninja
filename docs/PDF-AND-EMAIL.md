@@ -41,6 +41,10 @@ Payment email variables describe the payment, so `$view_url` in that template op
 
 ## Validation
 
-The native test suite renders the invoice and reminder examples through `InvoiceEmailEngine`, processes the PDF fragment through `PdfService` and its sanitizer, and verifies one receipt queue job after payment completion and no second job after duplicate delivery. A real native PDF was rendered, visually inspected and checked for its clickable URI annotation. Local mail/queue fakes were used; delivery to an external mailbox has not been tested.
+The native test suite renders the invoice and reminder examples through `InvoiceEmailEngine`, processes the PDF fragment through `PdfService` and its sanitizer, and verifies one receipt queue job after payment completion and no second job after duplicate delivery. A real native PDF was rendered, visually inspected and checked for its clickable URI annotation.
+
+We also delivered an invoice, first reminder and payment receipt through Invoice Ninja's native SMTP transport to a local Mailpit inbox. All three downloaded attachments were valid one-page PDFs with the full invoice URL and two clickable annotations. The invoice and reminder HTML buttons preserved the correct invitation link and spacing. Replaying the simulated completed USD callback produced no second receipt. These tests used synthetic addresses and an illustrative HTTPS domain; external mailbox delivery and funded payment remain untested. See the [validation record](TESTING.md) for details.
+
+![Received invoice email and its PDF attachment in the local SMTP inbox](screenshots/08-smtp-invoice-email.png)
 
 See Invoice Ninja's [email customization](https://invoiceninja.github.io/docs/advanced-topics/email-customization) and [advanced settings](https://invoiceninja.github.io/docs/user-guide/advanced-settings) documentation for the host application's settings.

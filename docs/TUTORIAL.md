@@ -49,3 +49,13 @@ An EUR invoice also redirects from the native portal to a checkout displaying **
 Follow the [PDF and email setup guide](PDF-AND-EMAIL.md) to customize the invoice design and Invoice/Reminder templates. The button opens the invoice portal; customers select Crypto / MakePay there.
 
 ![Native invoice PDF with MakePay button](screenshots/06-pdf-payment-button.png)
+
+## Check received emails and attachments
+
+Send an invoice and a reminder to a test inbox, then verify their **Pay with MakePay** buttons and downloaded PDF links. This screenshot shows actual local SMTP delivery from Invoice Ninja, including a PDF attachment and the space below the button.
+
+![Invoice email delivered through native SMTP](screenshots/08-smtp-invoice-email.png)
+
+A verified completed payment sends Invoice Ninja's usual receipt with **View Payment**. The screenshot below follows a simulated $10 USD completion. Replaying that callback did not send a second receipt. All messages were captured locally; no external email or funded payment was involved.
+
+![Native USD payment receipt in the local inbox](screenshots/09-smtp-payment-receipt.png)

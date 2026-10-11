@@ -18,13 +18,30 @@ The HTTP endpoint was also exercised through the running Laravel server: an inva
 
 The real native portal offered Crypto, displayed the MakePay gateway screen, and redirected through the production MakePay API to hosted Demo Shop 2 checkouts displaying **10 USD** and **10 EUR**. A dedicated approved merchant QA key and signing secret were stored in encrypted gateway configuration. No secrets are committed or included in tutorial images.
 
-A native custom invoice PDF containing the MakePay button was rendered, visually inspected and checked for its clickable URI annotation. Invoice and reminder HTML was rendered through the native email engine. Receipt queue behavior passed with mail/queue fakes; external mailbox delivery has not been tested. See [PDF/email setup](PDF-AND-EMAIL.md).
+A native custom invoice PDF containing the MakePay button was rendered, visually inspected and checked for its clickable URI annotation. Invoice and reminder HTML was rendered through the native email engine. Receipt queue behavior passed with mail/queue fakes and was then checked with actual local SMTP delivery. See [PDF/email setup](PDF-AND-EMAIL.md).
 
 The native merchant application login succeeded, and **Configure Gateways → Create → MakePay** displayed all four credential fields. The installer stores the definition using the upstream JSON-string convention required by `GatewayTransformer`; this is covered by a regression check.
 
 The QA credentials were also entered and saved through the native form. The real API credential check returned HTTP 200. Local Gotenberg PDF rendering verified that a localhost PDF hides the stripped button and retains the full visible URL; public-domain rendering retains clickable button/link annotations. The native Download PDF action was checked against the resulting downloaded file.
 
 The Paid screenshot is from a local signed-callback simulation. The hosted-checkout screenshot is from the real API connection. No crypto was transferred. Localhost cannot receive Internet callbacks without a public HTTPS route; a funded payment and automatic provider delivery remain required before customer rollout.
+
+## Native SMTP delivery and PDF attachments
+
+Invoice Ninja's native invoice email, first reminder and payment receipt were delivered through SMTP to a loopback-only Mailpit 1.27.4 inbox. The disposable fixture used a **10 USD** invoice and synthetic `example.test` addresses; no external email was sent. MakePay API responses and the signed completed payment were simulated, while the native email jobs, SMTP transport and local Gotenberg PDF renderer ran normally.
+
+| Delivered message | Downloaded attachment | PDF verification |
+| --- | --- | --- |
+| Invoice | 67,027 bytes | One page, $10.00, full visible invoice URL, two matching clickable URI annotations |
+| First reminder | 67,027 bytes | One page, $10.00, full visible invoice URL, two matching clickable URI annotations |
+| Payment receipt | 67,016 bytes | Valid one-page invoice PDF with two matching clickable URI annotations; receipt body shows $10.00 and **View Payment** |
+
+The invoice and reminder **Pay with MakePay** buttons pointed to the correct native invitation URL. `https://billing.example.com` was used only to verify the public-domain link sanitizer; it is a reserved example domain, not a running merchant portal. The receipt uses the native payment URL. The native receipt attachment was labeled `application/octet-stream`, but its downloaded bytes were a valid PDF.
+
+Replaying the completed callback returned HTTP 200 `already_completed`, created no additional payment and left exactly three delivered messages: invoice, reminder and **one** receipt. This verifies local SMTP delivery; delivery through a production mail provider to an external mailbox and a funded payment remain untested.
+
+![Invoice delivered to the local SMTP inbox](screenshots/08-smtp-invoice-email.png)
+![Single native receipt after the simulated USD payment](screenshots/09-smtp-payment-receipt.png)
 
 ## Reproduce
 
